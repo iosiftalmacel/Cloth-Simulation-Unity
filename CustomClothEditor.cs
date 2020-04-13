@@ -78,7 +78,7 @@ namespace Libraries
             myGradient.colorKeys = new GradientColorKey[] { new GradientColorKey(Color.green, 1), new GradientColorKey(Color.yellow, 0.5f), new GradientColorKey(Color.red, 0) };
 
             if (clothScript.windowRect == null || clothScript.windowRect.width == 0 || clothScript.windowRect.height == 0)
-                clothScript.windowRect = new Rect(Screen.width - 280, Screen.height - 230, 250, 200);
+                clothScript.windowRect = new Rect(18, 30, 250, 200);
 
             if (clothScript.interactiveObjs != null)
             {
@@ -172,23 +172,23 @@ namespace Libraries
 
                             clothScript.interactiveObjs[l].localRadius =  clothScript.interactiveObjs[l].radius / clothScript.transform.lossyScale.y;
                         }
-                        else if (clothScript.interactiveObjs[l].interactiveObjType == ObjType.Box)
-                        {
-                            if (clothScript.interactiveObjs[l].paramsType == ObjParamsType.UnityCollider)
-                            {
-                                clothScript.interactiveObjs[l].boxCollider = EditorGUILayout.ObjectField("Box Collider", clothScript.interactiveObjs[l].sphereCollider, typeof(BoxCollider), true) as BoxCollider;
-                                clothScript.interactiveObjs[l].transform = clothScript.interactiveObjs[l].boxCollider != null ? clothScript.interactiveObjs[l].boxCollider.transform : null;
+                        //else if (clothScript.interactiveObjs[l].interactiveObjType == ObjType.Box)
+                        //{
+                        //    if (clothScript.interactiveObjs[l].paramsType == ObjParamsType.UnityCollider)
+                        //    {
+                        //        clothScript.interactiveObjs[l].boxCollider = EditorGUILayout.ObjectField("Box Collider", clothScript.interactiveObjs[l].sphereCollider, typeof(BoxCollider), true) as BoxCollider;
+                        //        clothScript.interactiveObjs[l].transform = clothScript.interactiveObjs[l].boxCollider != null ? clothScript.interactiveObjs[l].boxCollider.transform : null;
 
-                                if (clothScript.interactiveObjs[l].boxCollider != null)
-                                    clothScript.interactiveObjs[l].radius = clothScript.interactiveObjs[l].sphereCollider.radius * clothScript.interactiveObjs[l].transform.lossyScale.y;
-                            }
-                            else
-                            {
-                                clothScript.interactiveObjs[l].transform = EditorGUILayout.ObjectField("Transform", clothScript.interactiveObjs[l].transform, typeof(Transform), true) as Transform;
-                                clothScript.interactiveObjs[l].size = EditorGUILayout.Vector3Field("Size", clothScript.interactiveObjs[l].size);
-                            }
-                            //clothScript.interactiveObjs[l].localSize = clothScript.interactiveObjs[l].size / clothScript.transform.lossyScale.y;  to do when make box collision
-                        }
+                        //        if (clothScript.interactiveObjs[l].boxCollider != null)
+                        //            clothScript.interactiveObjs[l].radius = clothScript.interactiveObjs[l].sphereCollider.radius * clothScript.interactiveObjs[l].transform.lossyScale.y;
+                        //    }
+                        //    else
+                        //    {
+                        //        clothScript.interactiveObjs[l].transform = EditorGUILayout.ObjectField("Transform", clothScript.interactiveObjs[l].transform, typeof(Transform), true) as Transform;
+                        //        clothScript.interactiveObjs[l].size = EditorGUILayout.Vector3Field("Size", clothScript.interactiveObjs[l].size);
+                        //    }
+                        //    //clothScript.interactiveObjs[l].localSize = clothScript.interactiveObjs[l].size / clothScript.transform.lossyScale.y;  to do when make box collision
+                        //}
 
                         if (clothScript.interactiveObjs[l].transform != null && GUI.changed)
                         {
@@ -283,7 +283,7 @@ namespace Libraries
             }
             else if (state == EditState.EditMaxDistance)
             {
-                ShowVertexPoints(false, false, (int i) => true, (int i) => clothScript.vertexDatas[i].maxDistance == -1 ? Color.black : myGradient.Evaluate(clothScript.vertexDatas[i].maxDistance / maxDistance), (bool k, int i) =>
+                ShowVertexPoints(false, false, (int i) => true, (int i) => clothScript.vertexDatas[i].maxDistance == -1 ? Color.black : myGradient.Evaluate(maxDistance > 0 ? clothScript.vertexDatas[i].maxDistance / maxDistance : maxDistance), (bool k, int i) =>
                 {
                     if (k)
                     {
@@ -293,7 +293,6 @@ namespace Libraries
                 });
                 Handles.BeginGUI();
                 clothScript.windowRect.width = 210;
-                clothScript.windowRect.height = 0;
 
                 clothScript.windowRect = GUILayout.Window(0, clothScript.windowRect, DrawVertexPaintToolBox, "Vertex Resistance");
                 Handles.EndGUI();

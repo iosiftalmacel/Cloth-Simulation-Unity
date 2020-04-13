@@ -21,6 +21,7 @@ namespace Libraries
         public Vector3 initialPosition;
         public Vector3 centetrDisplace;
         public Vector3 velocity;
+        public Vector3 acceleration;
         public float maxDistance;
         public float centetrDisplaceMag;
         public bool clone;
@@ -40,6 +41,7 @@ namespace Libraries
             this.initialPosition = position;
             this.maxDistance = maxDistance;
             this.centetrDisplace = Vector3.zero;
+            this.acceleration = Vector3.zero;
             this.velocity = Vector3.zero;
             this.clone = clone;
             centetrDisplaceMag = 0;
@@ -109,6 +111,9 @@ namespace Libraries
             if (!clone)
             {
                 velocity = position - prevPosition;
+
+                velocity += acceleration * Time.fixedDeltaTime;
+                acceleration = Vector3.zero;
 
                 prevPosition = position;
 
@@ -478,15 +483,15 @@ namespace Libraries
 
         void Start()
         {
-            mesh = GetComponent<MeshFilter>().mesh;
+            mesh = GetComponentInChildren<MeshFilter>().mesh;
 
             mesh.vertices = vertices;
             mesh.triangles = triangles;
             mesh.uv = uvs;
 
-            mesh.RecalculateNormals();
+            mesh.RecalculateNormals(360);
             mesh.RecalculateBounds();
-            mesh.Optimize();
+            ;
 
             mesh.MarkDynamic();
             mesh.UploadMeshData(false);
@@ -526,8 +531,8 @@ namespace Libraries
         {
             UpdateCollisions();
 
-            Profiler.BeginSample("Verlet");
-            float dTimeP2 = Time.deltaTime * Time.deltaTime;
+            UnityEngine.Profiling.Profiler.BeginSample("Verlet");
+            float dTimeP2 = Time.fixedDeltaTime * Time.fixedDeltaTime;
             //verlet integration
             if (clothActive.maxVertDeltaPos > clothData.sleepThreshold || clothActive.index == -1 || Time.time - startTime < 5 || clothData.wind != Vector3.zero)
             {
@@ -572,9 +577,9 @@ namespace Libraries
                     
                 }
             }
-            Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.EndSample();
 
-            Profiler.BeginSample("Wind");
+            UnityEngine.Profiling.Profiler.BeginSample("Wind");
             //wind
             if (clothData.wind != Vector3.zero)
             {
@@ -593,7 +598,7 @@ namespace Libraries
                 }
 
             }
-            Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.EndSample();
 
             for (int i = 0; i < interactiveObjs.Length; i++)
             {
@@ -625,7 +630,7 @@ namespace Libraries
 
         void UpdateCollisions()
         {
-            Profiler.BeginSample("Collision");
+            UnityEngine.Profiling.Profiler.BeginSample("Collision");
             //collision
 
             for (int i = 0; i < interactiveObjs.Length; i++)
@@ -646,6 +651,8 @@ namespace Libraries
                     {
                         if (interactiveObjs[i].transform == null || interactiveObjs[i].radius <= 0)
                             continue;
+                        if ((interactiveObjs[i].transform.position - interactiveObjs[i].prevPos).sqrMagnitude > interactiveObjs[i].rigidBody.velocity.sqrMagnitude / Time.deltaTime)
+                            continue;
                         if (CubeIntersectSphere(clothColliders[k].bounds.min, clothColliders[k].bounds.max, interactiveObjs[i].transform.position, interactiveObjs[i].radius)
                             || CheckLineBox(clothColliders[k].bounds.min, clothColliders[k].bounds.max, interactiveObjs[i].prevPos, interactiveObjs[i].transform.position))
                         {
@@ -665,15 +672,19 @@ namespace Libraries
                     }
                 }
             }
-            Profiler.EndSample();
+            UnityEngine.Profiling.Profiler.EndSample();
         }
 
         public void Reset()
         {
-            foreach (var item in vertexDatas)
+            if (vertexDatas != null)
             {
-                item.position = item.prevPosition = item.initialPosition;
+                foreach (var item in vertexDatas)
+                {
+                    item.position = item.prevPosition = item.initialPosition;
+                }
             }
+           
         }
 
         void Update()
@@ -998,13 +1009,12 @@ namespace Libraries
                 {
                     Plane plane = new Plane(v1.position, v2.position, v3.position);
 
-                    if (clothData.impactDampening > 0 && !addedForce )
+                    if (clothData.impactDampening > 0 && !addedForce)
                     {
                         addedForce = true;
-                        interactiveObj.rigidBody.velocity = transform.TransformDirection(rayHeading * (1 - clothData.impactDampening) / Time.deltaTime);
+                        interactiveObj.rigidBody.velocity = transform.TransformDirection(rayHeading * (1 - clothData.impactDampening) / Time.fixedDeltaTime);
                     }
-                    Vector3 relativePos = rayOrigin + rayDircetion * (colDistance );
-                    Debug.LogError("enters");
+                    Vector3 relativePos = rayOrigin + rayDircetion * (colDistance);
 
 
                     Vector3 netImpulse = rayDircetion * (rayMagnitude + interactiveObj.localRadius * 2 - colDistance);
@@ -1042,13 +1052,13 @@ namespace Libraries
                         if (firstCollision && clothData.impactDampening > 0 && !addedForce)
                         {
                             addedForce = true;
-                            interactiveObj.rigidBody.velocity = transform.TransformDirection(rayHeading * (1 - clothData.impactDampening) / Time.deltaTime);
+                            interactiveObj.rigidBody.velocity = transform.TransformDirection(rayHeading * (1 - clothData.impactDampening) / Time.fixedDeltaTime);
                         }
 
                         if (!addedForce && interactiveObj.bounce)
                         {
-                            interactiveObj.rigidBody.velocity -= transform.TransformDirection(j * 3.333f) / Time.deltaTime;
                             interactiveObj.rigidBody.velocity *= 0.99f;
+                            interactiveObj.rigidBody.velocity -= transform.TransformDirection(j * 3.333f) / Time.fixedDeltaTime;
                             addedForce = true;
                         }
 
@@ -1058,10 +1068,13 @@ namespace Libraries
                             netImpulse = heading - direction * interactiveObj.localRadius * 1.1f;
                         }
 
-                   
+
                         v1.Move(vertexDatas, netImpulse);
                         v2.Move(vertexDatas, netImpulse);
                         v3.Move(vertexDatas, netImpulse);
+                        //v1.acceleration += j * 3.333f / Time.fixedDeltaTime;
+                        //v2.acceleration += j * 3.333f / Time.fixedDeltaTime;
+                        //v3.acceleration += j * 3.333f / Time.fixedDeltaTime;
 
                         var newCenter = (v1.position + v2.position + v3.position) * 0.333333f;
                         interactiveObj.lastColTriangle = triangles[k];
@@ -1296,4 +1309,9 @@ namespace Libraries
 
 
   
+}
+
+public class AnswerThree
+{
+    
 }
